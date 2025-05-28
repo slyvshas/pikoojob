@@ -29,74 +29,76 @@ export function Header() {
   const supabase = createSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoadingUser, setIsLoadingUser] = useState(true); // Start true, set to false after initial auth check
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
 
   useEffect(() => {
     const fetchProfile = async (userId: string) => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      console.log(`[Header] Attempting to fetch profile for user ${userId}`);
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          console.log(`[Header] No profile found for user ${userId}. This is normal if the profile hasn't been created yet.`);
-        } else if (error.code === '42P01') {
-          console.warn(`[Header] The 'profiles' table does not seem to exist in your Supabase database. User: ${userId}`);
+        if (error) {
+          if (error.code === 'PGRST116') {
+            console.log(`[Header] No profile found for user ${userId}. This is normal if the profile hasn't been created yet.`);
+          } else if (error.code === '42P01') {
+            console.warn(`[Header] The 'profiles' table does not seem to exist in your Supabase database. User: ${userId}`);
+          } else {
+            console.error('[Header] Error fetching profile:', error.message, 'Code:', error.code, 'Details:', error.details);
+          }
+          setProfile(null);
         } else {
-          console.error('[Header] Error fetching profile:', error.message);
+          console.log('[Header] Profile fetched successfully:', data);
+          setProfile(data as Profile | null);
         }
+      } catch (e: any) {
+        console.error('[Header] Unexpected error during fetchProfile:', e.message, e);
         setProfile(null);
-      } else {
-        setProfile(data as Profile | null);
-        console.log('[Header] Profile fetched:', data); // DEBUG
       }
     };
 
-    // onAuthStateChange will also handle the initial session check
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('[Header] onAuthStateChange event:', event, 'session user:', session?.user?.id); // DEBUG
+      console.log('[Header] onAuthStateChange event:', event, 'Raw session object:', JSON.stringify(session)); // Log raw session
       const currentUser = session?.user ?? null;
-      setUser(currentUser);
+      console.log('[Header] Current user derived from session:', currentUser ? currentUser.id : 'null');
+
+      setUser(currentUser); 
 
       if (currentUser) {
+        console.log('[Header] Current user exists, calling fetchProfile for ID:', currentUser.id);
         await fetchProfile(currentUser.id);
       } else {
+        console.log('[Header] No current user, setting profile to null.');
         setProfile(null);
       }
-      // This will be called after the first auth state is processed (initial or changed)
+      
+      console.log('[Header] Setting isLoadingUser to false.');
       setIsLoadingUser(false);
 
-      // Refresh server-side session/cookies for relevant events
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') {
-        console.log('[Header] Refreshing router due to event:', event); // DEBUG
+        console.log('[Header] Refreshing router due to event:', event);
         router.refresh();
       }
 
-      // Handle redirection logic based on events
-      if (event === 'SIGNED_IN') {
-        if (pathname === '/login') {
-          console.log('[Header] Signed in event, currently on /login, redirecting to /'); // DEBUG
-          router.replace('/'); // Use replace to avoid login page in history
-        }
-      } else if (event === 'SIGNED_OUT') {
-        // If on a protected route, redirect to home
-        if (pathname.startsWith('/saved-jobs') || pathname.startsWith('/admin')) {
-          console.log('[Header] Signed out event, redirecting from protected route to /'); // DEBUG
-          router.push('/');
-        }
+      if (event === 'SIGNED_IN' && pathname === '/login') {
+        console.log('[Header] Signed in event, currently on /login, redirecting to /');
+        router.replace('/'); 
+      } else if (event === 'SIGNED_OUT' && (pathname.startsWith('/saved-jobs') || pathname.startsWith('/admin'))) {
+        console.log('[Header] Signed out event, redirecting from protected route to /');
+        router.push('/');
       }
     });
 
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [supabase, router, pathname]); // pathname is needed to check if current path is /login for redirects
+  }, [supabase, router, pathname]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    // onAuthStateChange listener will handle router.refresh() and clearing profile
   };
 
   const navItems = [
@@ -107,9 +109,9 @@ export function Header() {
   const displayName = profile?.full_name || profile?.username || user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0];
   const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
   const isAdmin = profile?.is_admin === true;
+  
+  // console.log('[Header Render] User ID:', user?.id, 'Is Admin:', isAdmin, 'isLoadingUser:', isLoadingUser, 'Profile:', profile);
 
-  // Debug log for rendering state
-  // console.log('[Header Render] User:', user?.id, 'Profile Admin:', profile?.is_admin, 'isAdmin:', isAdmin, 'isLoadingUser:', isLoadingUser);
 
   return (
     <header className="bg-card border-b border-border shadow-sm sticky top-0 z-50">
@@ -185,17 +187,8 @@ export function Header() {
                       <span>Post New Job</span>
                     </DropdownMenuItem>
                   )}
-                  {/* Example items - customize as needed */}
-                  {/* <DropdownMenuItem onClick={() => router.push('/profile/edit')}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Edit Profile</span>
-                  </DropdownMenuItem> */}
                 </DropdownMenuGroup>
                 {(isAdmin) && <DropdownMenuSeparator />}
-                {/* <DropdownMenuItem>
-                  <LifeBuoy className="mr-2 h-4 w-4" />
-                  <span>Support</span>
-                </DropdownMenuItem> */}
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>

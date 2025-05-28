@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Github } from 'lucide-react'; // Mail icon not used currently
+import { Github } from 'lucide-react';
 import type { Provider } from '@supabase/supabase-js';
 
 export default function LoginPage() {
@@ -29,14 +29,17 @@ export default function LoginPage() {
         setAuthError("Authentication failed. Please try again.");
     }
     // This effect checks if a user is already logged in when the page loads.
-    // The Header's onAuthStateChange also handles global session state.
+    // The Header's onAuthStateChange also handles global session state and redirection from /login.
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        // If already logged in, redirect away from the login page.
+      if (session && pathname === '/login') { // Added pathname check for clarity
+        // If already logged in AND on the login page, redirect.
+        // Header component's onAuthStateChange will also attempt this.
+        console.log('[Login Page] User already has session, redirecting from /login.');
         router.replace(redirectedFrom);
       }
     };
+    const pathname = window.location.pathname; // Get current pathname
     checkUser();
   }, [supabase, router, redirectedFrom, initialError]);
 
@@ -53,9 +56,10 @@ export default function LoginPage() {
     });
     if (error) {
       setAuthError(error.message);
-      setIsLoading(false);
     }
     // On success, Supabase redirects, so no need to setIsLoading(false) here
+    // setIsLoading(false) will be called only if there's an error.
+    setIsLoading(false); 
   };
 
   const handleSignInWithEmail = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -70,10 +74,12 @@ export default function LoginPage() {
     if (error) {
       setAuthError(error.message);
     } else {
-      // Successfully signed in with Supabase.
-      // Redirect to home. The onAuthStateChange listener in Header
-      // will call router.refresh(), ensuring session state is updated globally.
-      router.replace('/'); 
+      // Sign-in successful.
+      // The Header component's onAuthStateChange listener will detect 'SIGNED_IN',
+      // call router.refresh(), and handle redirection from /login if necessary.
+      // No explicit navigation here needed, let Header handle it.
+      console.log('[Login Page] signInWithPassword successful. Header will handle refresh and redirect.');
+      // router.replace(redirectedFrom); // Removed: Let Header handle this
     }
     setIsLoading(false);
   };
@@ -85,13 +91,13 @@ export default function LoginPage() {
 
     let generatedUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
     if (!generatedUsername) {
-      generatedUsername = 'user';
+      generatedUsername = 'user' + Math.random().toString(36).substring(2, 7);
     }
     if (generatedUsername.length < 3) {
       const neededChars = 3 - generatedUsername.length;
-      generatedUsername += Math.random().toString(36).substring(2, 2 + neededChars + 2);
+      generatedUsername += Math.random().toString(36).substring(2, 2 + neededChars + 2); // Ensure enough length
     }
-    generatedUsername = generatedUsername.substring(0, 24);
+    generatedUsername = generatedUsername.substring(0, 24); // Max length
 
     const signUpOptions = {
       emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectedFrom)}`,
@@ -111,8 +117,10 @@ export default function LoginPage() {
     } else if (data.session === null && data.user) {
       setMessage('Check your email for the confirmation link!');
     } else if (data.session) {
-       router.replace('/');
-       // Header's onAuthStateChange will handle router.refresh()
+       // Sign-up successful and session created (e.g. if auto-confirm is on)
+       // Header's onAuthStateChange will handle router.refresh() and redirect.
+       console.log('[Login Page] signUp successful with session. Header will handle refresh and redirect.');
+       // router.replace(redirectedFrom); // Removed: Let Header handle this
     }
     setIsLoading(false);
   };
@@ -195,3 +203,4 @@ export default function LoginPage() {
     </div>
   );
 }
+
