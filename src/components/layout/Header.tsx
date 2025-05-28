@@ -39,8 +39,17 @@ export function Header() {
         .eq('id', userId)
         .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116: no rows found
-        console.error('Error fetching profile:', error);
+      if (error) {
+        if (error.code === 'PGRST116') { // "No rows found"
+          // This is expected if a user exists in auth but not in profiles yet.
+          console.log(`No profile found for user ${userId}. This is normal if the profile hasn't been created yet.`);
+        } else if (error.code === '42P01') { // "Relation undefined" / "Table does not exist"
+          console.warn(`The 'profiles' table does not seem to exist in your Supabase database. Please run the SQL script to create it. User: ${userId}`);
+        } else {
+          // Log other, unexpected errors
+          console.error('Error fetching profile:', error.message);
+        }
+        setProfile(null); // Ensure profile is null on any error
       } else {
         setProfile(data as Profile | null); // Cast to Profile
       }

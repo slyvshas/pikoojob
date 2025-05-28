@@ -52,18 +52,40 @@ export async function middleware(request: NextRequest) {
     }
 
     // Check if the user is an admin
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', currentSession.user.id)
-      .single<Pick<Profile, 'is_admin'>>(); // Type assertion for better type safety
+    let profile: Pick<Profile, 'is_admin'> | null = null;
+    let profileErrorObj: any = null;
 
-    if (profileError || !profile || !profile.is_admin) {
+    try {
+        const { data, error } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', currentSession.user.id)
+        .single<Pick<Profile, 'is_admin'>>();
+        
+        profile = data;
+        profileErrorObj = error;
+    } catch (e) { // Catch unexpected errors during the call itself
+        profileErrorObj = e;
+    }
+    
+
+    if (profileErrorObj) {
+      if (profileErrorObj.code === 'PGRST116') { // No profile row found
+        // This is expected if a user exists in auth but not in profiles yet.
+        console.log(`[Middleware] No profile found for user ${currentSession.user.id} during admin check. User will be treated as non-admin.`);
+      } else if (profileErrorObj.code === '42P01') { // Table doesn't exist
+        console.warn(`[Middleware] The 'profiles' table does not seem to exist in Supabase. Admin check for user ${currentSession.user.id} will fail.`);
+      } else {
+        console.error('[Middleware] Error fetching profile for admin check:', profileErrorObj.message);
+      }
+    }
+
+    if (!profile || !profile.is_admin) {
       // Not an admin or error fetching profile, redirect to home or an unauthorized page
-      // For simplicity, redirecting to home. You might want a specific unauthorized page.
       const url = request.nextUrl.clone();
       url.pathname = '/';
       url.searchParams.set('error', 'unauthorized_admin_access');
+      console.log(`[Middleware] Admin access denied for user ${currentSession.user.id} to path ${pathname}. Profile: ${JSON.stringify(profile)}`);
       return NextResponse.redirect(url);
     }
   }

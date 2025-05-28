@@ -6,6 +6,8 @@ import { addJob } from "@/lib/jobs";
 import { JobPostingSchema, type JobPostingFormData } from "@/types";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { Profile } from '@/types_db';
+
 
 export async function createJobAction(formData: JobPostingFormData): Promise<{ success: boolean; message: string; jobId?: string; errors?: any }> {
   const supabase = createSupabaseServerClient();
@@ -15,18 +17,38 @@ export async function createJobAction(formData: JobPostingFormData): Promise<{ s
     return { success: false, message: "Authentication required." };
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single();
+  let profileData: Pick<Profile, 'is_admin'> | null = null;
+  let profileErrorObj: any = null;
 
-  if (profileError || !profile) {
-    console.error("Error fetching profile or profile not found:", profileError);
-    return { success: false, message: "Error verifying admin status." };
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single<Pick<Profile, 'is_admin'>>();
+    profileData = data;
+    profileErrorObj = error;
+  } catch (e) {
+    profileErrorObj = e;
   }
 
-  if (!profile.is_admin) {
+
+  if (profileErrorObj) {
+    let userMessage = "Error verifying admin status.";
+    if (profileErrorObj.code === 'PGRST116') {
+      console.log(`[Admin Action] No profile found for user ${user.id}. User treated as non-admin.`);
+      userMessage = "Profile not found. Admin verification failed.";
+    } else if (profileErrorObj.code === '42P01') {
+      console.warn(`[Admin Action] The 'profiles' table not found in Supabase. Admin verification for ${user.id} failed.`);
+      userMessage = "System configuration error: Profile system not found.";
+    } else {
+      console.error("[Admin Action] Error fetching profile or profile not found:", profileErrorObj.message);
+    }
+    return { success: false, message: userMessage };
+  }
+
+  if (!profileData || !profileData.is_admin) {
+    console.log(`[Admin Action] Unauthorized attempt to post job by user ${user.id}. Profile admin status: ${profileData?.is_admin}`);
     return { success: false, message: "Unauthorized. Admin access required." };
   }
 
@@ -40,11 +62,12 @@ export async function createJobAction(formData: JobPostingFormData): Promise<{ s
     revalidatePath('/'); // Revalidate home page to show new job listing
     revalidatePath('/jobs'); // If you have a generic /jobs page
     revalidatePath(`/jobs/${newJob.id}`); // Revalidate the new job's detail page
-    // Optionally, redirect to the new job page or admin dashboard
-    // redirect(`/jobs/${newJob.id}`); 
+    // redirect(`/jobs/${newJob.id}`); // Removed to allow success message on current page
     return { success: true, message: "Job posted successfully!", jobId: newJob.id };
   } catch (error) {
     console.error("Failed to add job:", error);
-    return { success: false, message: "Failed to post job. Please try again." };
+    // Check if error is an instance of Error before accessing message
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+    return { success: false, message: `Failed to post job. ${errorMessage}` };
   }
 }
