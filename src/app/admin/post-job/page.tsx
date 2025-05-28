@@ -1,7 +1,7 @@
 // src/app/admin/post-job/page.tsx
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form"; // Added Controller import
 import { zodResolver } from "@hookform/resolvers/zod";
 import { JobPostingSchema, type JobPostingFormData, employmentTypes } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ export default function PostJobPage() {
     handleSubmit,
     formState: { errors },
     reset,
-    control, // for Select
+    control, // for Controller
   } = useForm<JobPostingFormData>({
     resolver: zodResolver(JobPostingSchema),
     defaultValues: { // Provide sensible defaults
@@ -58,7 +58,12 @@ export default function PostJobPage() {
       });
       reset(); // Clear the form
       // Optionally redirect or revalidate
-      router.push(`/jobs/${result.jobId}`); // Redirect to the new job page
+      if (result.jobId) {
+        router.push(`/jobs/${result.jobId}`); // Redirect to the new job page
+      } else {
+        // Fallback or refresh if jobId is not present for some reason
+        router.refresh(); 
+      }
     } else {
       toast({
         title: "Error",
@@ -144,8 +149,11 @@ export default function PostJobPage() {
                     name="employmentType"
                     control={control}
                     render={({ field }) => (
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <SelectTrigger id="employmentType">
+                        <Select
+                            onValueChange={field.onChange}
+                            value={field.value} // Changed from defaultValue
+                        >
+                        <SelectTrigger id="employmentType" ref={field.ref}> {/* Added field.ref */}
                             <SelectValue placeholder="Select type" />
                         </SelectTrigger>
                         <SelectContent>
