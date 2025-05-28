@@ -14,40 +14,39 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
-      // If you create a 'profiles' table or other tables, define them here.
-      // Example:
-      // profiles: {
-      //   Row: {
-      //     id: string // Usually UUID, matches auth.users.id
-      //     updated_at: string | null
-      //     username: string | null
-      //     full_name: string | null
-      //     avatar_url: string | null
-      //     // Add any other profile fields
-      //   }
-      //   Insert: {
-      //     id: string
-      //     updated_at?: string | null
-      //     username?: string | null
-      //     full_name?: string | null
-      //     avatar_url?: string | null
-      //   }
-      //   Update: {
-      //     id?: string
-      //     updated_at?: string | null
-      //     username?: string | null
-      //     full_name?: string | null
-      //     avatar_url?: string | null
-      //   }
-      //   Relationships: [
-      //     {
-      //       foreignKeyName: "profiles_id_fkey"
-      //       columns: ["id"]
-      //       referencedRelation: "users"
-      //       referencedColumns: ["id"]
-      //     }
-      //   ]
-      // }
+      profiles: {
+        Row: {
+          id: string // UUID, matches auth.users.id
+          updated_at: string | null
+          username: string | null
+          full_name: string | null
+          avatar_url: string | null
+          // Add any other profile fields you need
+        }
+        Insert: {
+          id: string // Usually UUID
+          updated_at?: string | null
+          username?: string | null
+          full_name?: string | null
+          avatar_url?: string | null
+        }
+        Update: {
+          id?: string
+          updated_at?: string | null
+          username?: string | null
+          full_name?: string | null
+          avatar_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      // If you create other tables, define them here.
     }
     Views: {
       [_ in never]: never
@@ -63,3 +62,6 @@ export interface Database {
     }
   }
 }
+
+// Helper type for profile data
+export type Profile = Database['public']['Tables']['profiles']['Row'];

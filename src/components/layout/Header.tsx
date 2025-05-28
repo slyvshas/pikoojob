@@ -2,6 +2,7 @@
 "use client";
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Compass, Briefcase, Bookmark, LogIn, LogOut, UserCircle, Settings, LifeBuoy } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -9,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
+import type { Profile } from '@/types_db'; // Import Profile type
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,27 +28,45 @@ export function Header() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null); // State for profile data
   const [isLoadingUser, setIsLoadingUser] = useState(true);
 
   useEffect(() => {
+    const fetchProfile = async (userId: string) => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116: no rows found
+        console.error('Error fetching profile:', error);
+      } else {
+        setProfile(data);
+      }
+    };
+
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
+      setProfile(null); // Reset profile on auth change
+
+      if (currentUser) {
+        await fetchProfile(currentUser.id);
+      }
       setIsLoadingUser(false);
       
       if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-        // Ensure client-side navigation reflects auth state, then refresh for server components
         if (pathname === '/login') {
             router.push('/');
         }
         router.refresh();
       }
       if (event === 'SIGNED_OUT') {
-        // Redirect to home or login after sign out
-        if (pathname.startsWith('/saved-jobs')) { // or any other protected route
+        if (pathname.startsWith('/saved-jobs')) {
             router.push('/');
         } else {
-            router.refresh(); // Refresh current page if not a protected one
+            router.refresh();
         }
       }
     });
@@ -54,7 +74,11 @@ export function Header() {
     // Check initial session
     const getInitialSession = async () => {
         const { data: { session } } = await supabase.auth.getSession();
-        setUser(session?.user ?? null);
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        if (currentUser) {
+          await fetchProfile(currentUser.id);
+        }
         setIsLoadingUser(false);
     };
     getInitialSession();
@@ -66,6 +90,7 @@ export function Header() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    setProfile(null); // Clear profile on logout
     // The onAuthStateChange listener will handle router.refresh() or redirects
   };
 
@@ -73,6 +98,10 @@ export function Header() {
     { href: '/', label: 'Find Jobs', icon: Briefcase, requiresAuth: false },
     { href: '/saved-jobs', label: 'Saved Jobs', icon: Bookmark, requiresAuth: true },
   ];
+
+  const displayName = profile?.full_name || profile?.username || user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0];
+  const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
+
 
   return (
     <header className="bg-card border-b border-border shadow-sm sticky top-0 z-50">
@@ -85,7 +114,7 @@ export function Header() {
           {navItems.map((item) => {
             if (item.requiresAuth && !user && !isLoadingUser) return null;
             if (item.requiresAuth && isLoadingUser) {
-                 return ( // Skeleton for nav items that require auth while user is loading
+                 return ( 
                     <Skeleton key={item.href} className="h-8 w-24 rounded-md hidden sm:block" />
                  );
             }
@@ -111,18 +140,18 @@ export function Header() {
           })}
 
           {isLoadingUser ? (
-             <Skeleton className="h-8 w-8 rounded-full" />
+             <Skeleton className="h-9 w-9 rounded-full" />
           ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
-                   {user.user_metadata?.avatar_url ? (
+                   {avatarUrl ? (
                       <Image
-                        src={user.user_metadata.avatar_url}
-                        alt={user.user_metadata?.full_name || user.email || "User Avatar"}
+                        src={avatarUrl}
+                        alt={displayName || "User Avatar"}
                         width={36}
                         height={36}
-                        className="h-9 w-9 rounded-full"
+                        className="h-9 w-9 rounded-full object-cover"
                       />
                     ) : (
                       <UserCircle size={24} className="text-muted-foreground" />
@@ -133,7 +162,7 @@ export function Header() {
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">
-                      {user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0]}
+                      {displayName}
                     </p>
                     <p className="text-xs leading-none text-muted-foreground">
                       {user.email}
@@ -143,13 +172,9 @@ export function Header() {
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   {/* Example items - customize as needed */}
-                  {/* <DropdownMenuItem onClick={() => router.push('/profile')}>
-                    <UserCircle className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/settings')}>
+                  {/* <DropdownMenuItem onClick={() => router.push('/profile/edit')}>
                     <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
+                    <span>Edit Profile</span>
                   </DropdownMenuItem> */}
                 </DropdownMenuGroup>
                 {/* <DropdownMenuSeparator /> */}
