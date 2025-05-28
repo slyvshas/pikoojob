@@ -58,15 +58,15 @@ export async function createJobAction(formData: JobPostingFormData): Promise<{ s
   }
 
   try {
-    const newJob = await addJob(validation.data);
+    // Pass user.id to addJob
+    const newJob = await addJob(validation.data, user.id);
     revalidatePath('/'); // Revalidate home page to show new job listing
     revalidatePath('/jobs'); // If you have a generic /jobs page
     revalidatePath(`/jobs/${newJob.id}`); // Revalidate the new job's detail page
-    // redirect(`/jobs/${newJob.id}`); // Removed to allow success message on current page
+    
     return { success: true, message: "Job posted successfully!", jobId: newJob.id };
   } catch (error) {
     console.error("Failed to add job:", error);
-    // Check if error is an instance of Error before accessing message
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
     return { success: false, message: `Failed to post job. ${errorMessage}` };
   }

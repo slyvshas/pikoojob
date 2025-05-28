@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { JobPosting } from '@/types';
+import type { JobPosting } from '@/types'; // Ensure this type matches the new structure
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,14 +31,14 @@ export function JobCard({ job, isSaved, onToggleSave, isLoaded }: JobCardProps) 
         <CardHeader className="pb-3">
           <div className="flex justify-between items-start gap-4">
             <div className="flex items-center gap-3">
-              {job.companyLogo && (
+              {job.companyLogoUrl && ( // Updated from job.companyLogo
                 <Image
-                  src={job.companyLogo}
+                  src={job.companyLogoUrl} // Updated from job.companyLogo
                   alt={`${job.companyName} logo`}
                   width={48}
                   height={48}
                   className="rounded-md border"
-                  data-ai-hint={job.dataAiHint as string || "company logo"}
+                  data-ai-hint={job.companyLogoAiHint || "company logo"} // Updated from job.dataAiHint
                 />
               )}
               <div>

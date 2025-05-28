@@ -3,7 +3,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import type { JobPosting } from '@/types';
+import type { JobPosting } from '@/types'; // Ensure this type matches the new structure
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,14 +30,14 @@ export default function JobDetailClient({ job }: JobDetailClientProps) {
     <div className="bg-card p-4 sm:p-6 md:p-8 rounded-lg shadow-lg">
       <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-6">
         <div className="flex items-start gap-4">
-          {job.companyLogo && (
+          {job.companyLogoUrl && ( // Updated from job.companyLogo
             <Image
-              src={job.companyLogo}
+              src={job.companyLogoUrl} // Updated from job.companyLogo
               alt={`${job.companyName} logo`}
               width={64}
               height={64}
               className="rounded-lg border hidden sm:block"
-              data-ai-hint={job.dataAiHint as string || "company logo"}
+              data-ai-hint={job.companyLogoAiHint || "company logo"} // Updated from job.dataAiHint
             />
           )}
           <div>

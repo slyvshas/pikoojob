@@ -22,7 +22,6 @@ export interface Database {
           full_name: string | null
           avatar_url: string | null
           is_admin?: boolean | null // Added for admin role
-          // Add any other profile fields you need
         }
         Insert: {
           id: string // Usually UUID
@@ -30,7 +29,7 @@ export interface Database {
           username?: string | null
           full_name?: string | null
           avatar_url?: string | null
-          is_admin?: boolean | null // Added for admin role
+          is_admin?: boolean | null
         }
         Update: {
           id?: string
@@ -38,7 +37,7 @@ export interface Database {
           username?: string | null
           full_name?: string | null
           avatar_url?: string | null
-          is_admin?: boolean | null // Added for admin role
+          is_admin?: boolean | null
         }
         Relationships: [
           {
@@ -49,7 +48,75 @@ export interface Database {
           }
         ]
       }
-      // If you create other tables, define them here.
+      job_postings: { // New table for job postings
+        Row: {
+          id: string // uuid, primary key
+          title: string
+          company_name: string
+          company_logo_url: string | null
+          company_logo_ai_hint: string | null
+          company_description: string | null
+          location: string
+          description: string // Short description for cards
+          full_description: string | null // Detailed description, allows HTML
+          requirements: string[] | null // Array of strings
+          employment_type: 'Full-time' | 'Part-time' | 'Contract' | 'Internship'
+          salary: string | null
+          posted_date: string // timestamptz
+          external_apply_link: string
+          tags: string[] | null // Array of strings
+          created_at: string // timestamptz
+          updated_at: string // timestamptz
+          created_by: string | null // uuid, foreign key to auth.users
+        }
+        Insert: {
+          id?: string // uuid, defaults to gen_random_uuid()
+          title: string
+          company_name: string
+          company_logo_url?: string | null
+          company_logo_ai_hint?: string | null
+          company_description?: string | null
+          location: string
+          description: string
+          full_description?: string | null
+          requirements?: string[] | null
+          employment_type: 'Full-time' | 'Part-time' | 'Contract' | 'Internship'
+          salary?: string | null
+          posted_date?: string // timestamptz, defaults to now()
+          external_apply_link: string
+          tags?: string[] | null
+          created_at?: string // timestamptz, defaults to now()
+          updated_at?: string // timestamptz, defaults to now()
+          created_by?: string | null // uuid
+        }
+        Update: {
+          id?: string
+          title?: string
+          company_name?: string
+          company_logo_url?: string | null
+          company_logo_ai_hint?: string | null
+          company_description?: string | null
+          location?: string
+          description?: string
+          full_description?: string | null
+          requirements?: string[] | null
+          employment_type?: 'Full-time' | 'Part-time' | 'Contract' | 'Internship'
+          salary?: string | null
+          posted_date?: string
+          external_apply_link?: string
+          tags?: string[] | null
+          updated_at?: string // timestamptz, managed by trigger
+          created_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_postings_created_by_fkey"
+            columns: ["created_by"]
+            referencedRelation: "users" // Corrected: should reference auth.users
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -68,3 +135,5 @@ export interface Database {
 
 // Helper type for profile data
 export type Profile = Database['public']['Tables']['profiles']['Row'];
+// Helper type for job posting data from DB
+export type DbJobPosting = Database['public']['Tables']['job_postings']['Row'];
