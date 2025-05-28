@@ -1,8 +1,10 @@
+// src/types/index.ts
 export type JobPosting = {
   id: string;
   title: string;
   companyName: string;
   companyLogo?: string; // URL
+  dataAiHint?: string; // Added for AI image hint consistency
   companyDescription?: string;
   location: string;
   description: string;
