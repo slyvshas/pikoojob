@@ -2,9 +2,10 @@
 "use client";
 
 import Image from 'next/image';
-import Link from 'next/link';
-import type { JobPosting } from '@/types'; // Ensure this type matches the new structure
-import { Button } from '@/components/ui/button';
+// Link component is no longer needed for this specific button, but might be used elsewhere.
+// import Link from 'next/link';
+import type { JobPosting } from '@/types';
+import { Button, buttonVariants } from '@/components/ui/button'; // Imported buttonVariants
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bookmark, ExternalLink, MapPin, Briefcase, Building2, CalendarDays, DollarSign } from 'lucide-react';
@@ -30,14 +31,14 @@ export default function JobDetailClient({ job }: JobDetailClientProps) {
     <div className="bg-card p-4 sm:p-6 md:p-8 rounded-lg shadow-lg">
       <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-6">
         <div className="flex items-start gap-4">
-          {job.companyLogoUrl && ( // Updated from job.companyLogo
+          {job.companyLogoUrl && (
             <Image
-              src={job.companyLogoUrl} // Updated from job.companyLogo
+              src={job.companyLogoUrl}
               alt={`${job.companyName} logo`}
               width={64}
               height={64}
               className="rounded-lg border hidden sm:block"
-              data-ai-hint={job.companyLogoAiHint || "company logo"} // Updated from job.dataAiHint
+              data-ai-hint={job.companyLogoAiHint || "company logo"}
             />
           )}
           <div>
@@ -49,11 +50,17 @@ export default function JobDetailClient({ job }: JobDetailClientProps) {
           </div>
         </div>
         <div className="flex flex-col sm:flex-row md:flex-col gap-3 items-start sm:items-center md:items-end w-full md:w-auto shrink-0">
-          <Button asChild size="lg" className="w-full sm:w-auto md:w-full bg-accent hover:bg-accent/90 text-accent-foreground">
-            <Link href={job.externalApplyLink} target="_blank" rel="noopener noreferrer">
-              Apply Now <ExternalLink size={18} className="ml-2" />
-            </Link>
-          </Button>
+          <a
+            href={job.externalApplyLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              buttonVariants({ size: "lg" }),
+              "w-full sm:w-auto md:w-full bg-accent hover:bg-accent/90 text-accent-foreground"
+            )}
+          >
+            Apply Now <ExternalLink size={18} className="ml-2" />
+          </a>
           {savedJobsLoaded && (
             <Tooltip>
                 <TooltipTrigger asChild>
