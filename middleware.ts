@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import type { Profile } from '@/types_db'; // Import Profile type
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -17,57 +18,54 @@ export async function middleware(request: NextRequest) {
           return request.cookies.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
-          // If the cookie is set, update the request and response cookies.
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          });
+          request.cookies.set({ name, value, ...options });
+          response = NextResponse.next({ request: { headers: request.headers } });
+          response.cookies.set({ name, value, ...options });
         },
         remove(name: string, options: CookieOptions) {
-          // If the cookie is removed, update the request and response cookies.
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
+          request.cookies.set({ name, value: '', ...options });
+          response = NextResponse.next({ request: { headers: request.headers } });
+          response.cookies.set({ name, value: '', ...options });
         },
       },
     }
   );
 
-  // Refresh session if expired - required for Server Components
-  // https://supabase.com/docs/guides/auth/server-side/nextjs
   const { data: { session: currentSession } } = await supabase.auth.getSession();
-
-
-  // Optionally protect routes
   const { pathname } = request.nextUrl;
+
+  // Protect /saved-jobs route
   if (!currentSession && pathname.startsWith('/saved-jobs')) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
-    url.searchParams.set('redirectedFrom', pathname); // Pass the original path to redirect back
+    url.searchParams.set('redirectedFrom', pathname);
     return NextResponse.redirect(url);
+  }
+
+  // Protect /admin routes
+  if (pathname.startsWith('/admin')) {
+    if (!currentSession) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
+      url.searchParams.set('redirectedFrom', pathname);
+      return NextResponse.redirect(url);
+    }
+
+    // Check if the user is an admin
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', currentSession.user.id)
+      .single<Pick<Profile, 'is_admin'>>(); // Type assertion for better type safety
+
+    if (profileError || !profile || !profile.is_admin) {
+      // Not an admin or error fetching profile, redirect to home or an unauthorized page
+      // For simplicity, redirecting to home. You might want a specific unauthorized page.
+      const url = request.nextUrl.clone();
+      url.pathname = '/';
+      url.searchParams.set('error', 'unauthorized_admin_access');
+      return NextResponse.redirect(url);
+    }
   }
   
   // If user is logged in and tries to access /login, redirect to home

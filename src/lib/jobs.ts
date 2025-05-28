@@ -1,4 +1,4 @@
-import type { JobPosting } from '@/types';
+import type { JobPosting, JobPostingFormData } from '@/types';
 
 const mockJobs: JobPosting[] = [
   {
@@ -89,10 +89,42 @@ const mockJobs: JobPosting[] = [
 export async function getAllJobs(): Promise<JobPosting[]> {
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 50));
-  return mockJobs;
+  return [...mockJobs]; // Return a copy to avoid direct mutation issues if any
 }
 
 export async function getJobById(id: string): Promise<JobPosting | undefined> {
   await new Promise(resolve => setTimeout(resolve, 50));
   return mockJobs.find(job => job.id === id);
+}
+
+/**
+ * WARNING: THIS IS NOT A PERSISTENT SOLUTION AND ONLY WORKS IN-MEMORY FOR THE CURRENT SERVER INSTANCE.
+ * Job postings added this way will be lost when the server restarts or a new instance is deployed.
+ * In a real application, you would use a database (e.g., Supabase) to store job postings.
+ */
+export async function addJob(jobData: JobPostingFormData): Promise<JobPosting> {
+  await new Promise(resolve => setTimeout(resolve, 50)); // Simulate API delay
+
+  const newId = (Date.now()).toString() + Math.random().toString(36).substring(2, 7);
+  
+  const newJob: JobPosting = {
+    id: newId,
+    title: jobData.title,
+    companyName: jobData.companyName,
+    companyLogo: jobData.companyLogoUrl || `https://placehold.co/64x64.png?text=${jobData.companyName.substring(0,2)}`,
+    dataAiHint: jobData.companyLogoAiHint || 'company logo',
+    companyDescription: jobData.companyDescription,
+    location: jobData.location,
+    description: jobData.description,
+    fullDescription: jobData.fullDescription,
+    requirements: jobData.requirements.split(',').map(req => req.trim()).filter(req => req),
+    employmentType: jobData.employmentType,
+    salary: jobData.salary,
+    postedDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
+    externalApplyLink: jobData.externalApplyLink,
+    tags: jobData.tags?.split(',').map(tag => tag.trim()).filter(tag => tag) || [],
+  };
+
+  mockJobs.unshift(newJob); // Add to the beginning of the array so it appears first
+  return newJob;
 }

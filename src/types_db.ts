@@ -21,6 +21,7 @@ export interface Database {
           username: string | null
           full_name: string | null
           avatar_url: string | null
+          is_admin?: boolean | null // Added for admin role
           // Add any other profile fields you need
         }
         Insert: {
@@ -29,6 +30,7 @@ export interface Database {
           username?: string | null
           full_name?: string | null
           avatar_url?: string | null
+          is_admin?: boolean | null // Added for admin role
         }
         Update: {
           id?: string
@@ -36,6 +38,7 @@ export interface Database {
           username?: string | null
           full_name?: string | null
           avatar_url?: string | null
+          is_admin?: boolean | null // Added for admin role
         }
         Relationships: [
           {

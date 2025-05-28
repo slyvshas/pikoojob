@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Compass, Briefcase, Bookmark, LogIn, LogOut, UserCircle, Settings, LifeBuoy } from 'lucide-react';
+import { Compass, Briefcase, Bookmark, LogIn, LogOut, UserCircle, Settings, LifeBuoy, PlusCircle } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -35,14 +35,14 @@ export function Header() {
     const fetchProfile = async (userId: string) => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*') // Fetch all profile fields
         .eq('id', userId)
         .single();
 
       if (error && error.code !== 'PGRST116') { // PGRST116: no rows found
         console.error('Error fetching profile:', error);
       } else {
-        setProfile(data);
+        setProfile(data as Profile | null); // Cast to Profile
       }
     };
 
@@ -63,7 +63,7 @@ export function Header() {
         router.refresh();
       }
       if (event === 'SIGNED_OUT') {
-        if (pathname.startsWith('/saved-jobs')) {
+        if (pathname.startsWith('/saved-jobs') || pathname.startsWith('/admin')) { // Also redirect from admin if logged out
             router.push('/');
         } else {
             router.refresh();
@@ -101,6 +101,7 @@ export function Header() {
 
   const displayName = profile?.full_name || profile?.username || user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0];
   const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
+  const isAdmin = profile?.is_admin === true;
 
 
   return (
@@ -171,13 +172,19 @@ export function Header() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
+                  {isAdmin && (
+                    <DropdownMenuItem onClick={() => router.push('/admin/post-job')}>
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      <span>Post New Job</span>
+                    </DropdownMenuItem>
+                  )}
                   {/* Example items - customize as needed */}
                   {/* <DropdownMenuItem onClick={() => router.push('/profile/edit')}>
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Edit Profile</span>
                   </DropdownMenuItem> */}
                 </DropdownMenuGroup>
-                {/* <DropdownMenuSeparator /> */}
+                {(isAdmin) && <DropdownMenuSeparator />} {/* Separator only if admin items were shown */}
                 {/* <DropdownMenuItem>
                   <LifeBuoy className="mr-2 h-4 w-4" />
                   <span>Support</span>
