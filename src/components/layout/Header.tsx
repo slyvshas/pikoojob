@@ -29,82 +29,74 @@ export function Header() {
   const supabase = createSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [isLoadingUser, setIsLoadingUser] = useState(true); // Start true, set to false after initial auth check
 
   useEffect(() => {
     const fetchProfile = async (userId: string) => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*') // Fetch all profile fields
+        .select('*')
         .eq('id', userId)
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') { // "No rows found"
-          console.log(`[Header] No profile found for user ${userId}. This is normal if the profile hasn't been created yet. User will be treated as non-admin.`);
-        } else if (error.code === '42P01') { // "Relation undefined" / "Table does not exist"
-          console.warn(`[Header] The 'profiles' table does not seem to exist in your Supabase database. Please run the SQL script to create it. User: ${userId}`);
+        if (error.code === 'PGRST116') {
+          console.log(`[Header] No profile found for user ${userId}. This is normal if the profile hasn't been created yet.`);
+        } else if (error.code === '42P01') {
+          console.warn(`[Header] The 'profiles' table does not seem to exist in your Supabase database. User: ${userId}`);
         } else {
           console.error('[Header] Error fetching profile:', error.message);
         }
-        setProfile(null); // Ensure profile is null on any error or if not found
+        setProfile(null);
       } else {
         setProfile(data as Profile | null);
+        console.log('[Header] Profile fetched:', data); // DEBUG
       }
     };
 
+    // onAuthStateChange will also handle the initial session check
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('[Header] onAuthStateChange event:', event, 'session user:', session?.user?.id); // DEBUG
       const currentUser = session?.user ?? null;
       setUser(currentUser);
-      setIsLoadingUser(true); // Indicate loading while profile is being fetched/updated
 
       if (currentUser) {
         await fetchProfile(currentUser.id);
       } else {
-        setProfile(null); // User is logged out, so clear profile
+        setProfile(null);
       }
-      setIsLoadingUser(false); // Done loading profile information
-      
-      if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-        if (pathname === '/login') {
-            router.push('/');
-        }
+      // This will be called after the first auth state is processed (initial or changed)
+      setIsLoadingUser(false);
+
+      // Refresh server-side session/cookies for relevant events
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') {
+        console.log('[Header] Refreshing router due to event:', event); // DEBUG
         router.refresh();
       }
-      if (event === 'SIGNED_OUT') {
-        // setProfile(null); // Already handled above if currentUser is null
+
+      // Handle redirection logic based on events
+      if (event === 'SIGNED_IN') {
+        if (pathname === '/login') {
+          console.log('[Header] Signed in event, currently on /login, redirecting to /'); // DEBUG
+          router.replace('/'); // Use replace to avoid login page in history
+        }
+      } else if (event === 'SIGNED_OUT') {
+        // If on a protected route, redirect to home
         if (pathname.startsWith('/saved-jobs') || pathname.startsWith('/admin')) {
-            router.push('/');
-        } else {
-            router.refresh();
+          console.log('[Header] Signed out event, redirecting from protected route to /'); // DEBUG
+          router.push('/');
         }
       }
     });
 
-    // Check initial session
-    const getInitialSession = async () => {
-        setIsLoadingUser(true);
-        const { data: { session } } = await supabase.auth.getSession();
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-        if (currentUser) {
-          await fetchProfile(currentUser.id);
-        } else {
-          setProfile(null);
-        }
-        setIsLoadingUser(false);
-    };
-    getInitialSession();
-
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [supabase, router, pathname]);
+  }, [supabase, router, pathname]); // pathname is needed to check if current path is /login for redirects
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    // setProfile(null); // Auth listener will handle clearing profile
-    // The onAuthStateChange listener will handle router.refresh() or redirects
+    // onAuthStateChange listener will handle router.refresh() and clearing profile
   };
 
   const navItems = [
@@ -116,6 +108,8 @@ export function Header() {
   const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
   const isAdmin = profile?.is_admin === true;
 
+  // Debug log for rendering state
+  // console.log('[Header Render] User:', user?.id, 'Profile Admin:', profile?.is_admin, 'isAdmin:', isAdmin, 'isLoadingUser:', isLoadingUser);
 
   return (
     <header className="bg-card border-b border-border shadow-sm sticky top-0 z-50">
@@ -128,7 +122,7 @@ export function Header() {
           {navItems.map((item) => {
             if (item.requiresAuth && !user && !isLoadingUser) return null;
             if (item.requiresAuth && isLoadingUser) {
-                 return ( 
+                 return (
                     <Skeleton key={item.href} className="h-8 w-24 rounded-md hidden sm:block" />
                  );
             }
@@ -197,7 +191,7 @@ export function Header() {
                     <span>Edit Profile</span>
                   </DropdownMenuItem> */}
                 </DropdownMenuGroup>
-                {(isAdmin) && <DropdownMenuSeparator />} {/* Separator only if admin items were shown */}
+                {(isAdmin) && <DropdownMenuSeparator />}
                 {/* <DropdownMenuItem>
                   <LifeBuoy className="mr-2 h-4 w-4" />
                   <span>Support</span>

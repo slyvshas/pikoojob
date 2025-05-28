@@ -28,9 +28,12 @@ export default function LoginPage() {
     if (initialError === 'auth_failed') {
         setAuthError("Authentication failed. Please try again.");
     }
+    // This effect checks if a user is already logged in when the page loads.
+    // The Header's onAuthStateChange also handles global session state.
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        // If already logged in, redirect away from the login page.
         router.replace(redirectedFrom);
       }
     };
@@ -69,11 +72,8 @@ export default function LoginPage() {
     } else {
       // Successfully signed in with Supabase.
       // Redirect to home. The onAuthStateChange listener in Header
-      // will also call router.refresh(), ensuring session state is updated globally.
-      // From home, user can navigate to protected routes.
-      // If they were deep-linked, middleware will re-evaluate on the next navigation attempt.
+      // will call router.refresh(), ensuring session state is updated globally.
       router.replace('/'); 
-      router.refresh(); // Still good to call refresh here to ensure client state is up-to-date.
     }
     setIsLoading(false);
   };
@@ -83,25 +83,19 @@ export default function LoginPage() {
     setAuthError(null);
     setMessage(null);
 
-    // Generate a username from email to pass to the trigger via options.data
-    // This helps satisfy potential DB constraints on profiles.username (e.g., NOT NULL, length)
     let generatedUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
-    if (!generatedUsername) { // Handle cases like ".@example.com" or "@@example.com"
+    if (!generatedUsername) {
       generatedUsername = 'user';
     }
-
-    // Ensure username is at least 3 characters long, append random chars if not
     if (generatedUsername.length < 3) {
       const neededChars = 3 - generatedUsername.length;
-      // Append a few random alphanumeric characters (e.g., 'a' + 'bc1' if neededChars is 1 and base is 'a')
-      generatedUsername += Math.random().toString(36).substring(2, 2 + neededChars + 2); // +2 for more variety
+      generatedUsername += Math.random().toString(36).substring(2, 2 + neededChars + 2);
     }
-    // Limit overall length for sanity (e.g., max 24 characters)
     generatedUsername = generatedUsername.substring(0, 24);
 
     const signUpOptions = {
       emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectedFrom)}`,
-      data: { user_name: generatedUsername } // This will be available in trigger's NEW.raw_user_meta_data
+      data: { user_name: generatedUsername } 
     };
 
     const { data, error } = await supabase.auth.signUp({
@@ -113,15 +107,12 @@ export default function LoginPage() {
     if (error) {
       setAuthError(error.message);
     } else if (data.user && data.user.identities?.length === 0) {
-       // This case often means the user already exists but hasn't confirmed their email,
-       // or is trying to sign up with an email that's already registered.
        setAuthError("User may already exist or email needs confirmation. Try signing in or check your email.");
     } else if (data.session === null && data.user) {
       setMessage('Check your email for the confirmation link!');
     } else if (data.session) {
-       // User signed up and is immediately logged in. Redirect to home.
        router.replace('/');
-       router.refresh(); 
+       // Header's onAuthStateChange will handle router.refresh()
     }
     setIsLoading(false);
   };
@@ -196,17 +187,6 @@ export default function LoginPage() {
             <Github className="mr-2 h-4 w-4" />
             GitHub
           </Button>
-          {/* Add more providers as needed, e.g. Google:
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => handleSignInWithProvider('google')}
-            disabled={isLoading}
-          >
-            <svg className="mr-2 h-4 w-4" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Google</title><path d="M12.24 10.285V14.4h6.806c-.275 1.765-2.056 5.174-6.806 5.174-4.095 0-7.439-3.386-7.439-7.574s3.345-7.574 7.439-7.574c2.33 0 3.891.989 4.785 1.85l3.254-3.138C18.189 1.186 15.479 0 12.24 0c-6.635 0-12 5.365-12 12s5.365 12 12 12c6.926 0 11.52-4.869 11.52-11.726 0-.788-.085-1.39-.189-1.989H12.24z"/></svg>
-            Google
-          </Button>
-          */}
         </CardContent>
         <CardFooter className="text-xs text-center text-muted-foreground">
             By signing up, you agree to our imaginary Terms of Service.
