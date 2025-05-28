@@ -21,6 +21,9 @@ interface JobListingsProps {
   initialJobs: JobPosting[];
 }
 
+const ALL_TYPES_VALUE = "all-types";
+const ALL_LOCATIONS_VALUE = "all-locations";
+
 export default function JobListings({ initialJobs }: JobListingsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [employmentTypeFilter, setEmploymentTypeFilter] = useState<string>('');
@@ -110,12 +113,15 @@ export default function JobListings({ initialJobs }: JobListingsProps) {
             <label htmlFor="filter-employment-type" className="block text-sm font-medium text-foreground mb-1">
               Employment Type
             </label>
-            <Select value={employmentTypeFilter} onValueChange={setEmploymentTypeFilter}>
+            <Select 
+              value={employmentTypeFilter || ALL_TYPES_VALUE} 
+              onValueChange={(value) => setEmploymentTypeFilter(value === ALL_TYPES_VALUE ? '' : value)}
+            >
               <SelectTrigger id="filter-employment-type" className="w-full">
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Types</SelectItem>
+                <SelectItem value={ALL_TYPES_VALUE}>All Types</SelectItem>
                 {uniqueEmploymentTypes.map(type => (
                   <SelectItem key={type} value={type}>{type}</SelectItem>
                 ))}
@@ -126,12 +132,15 @@ export default function JobListings({ initialJobs }: JobListingsProps) {
             <label htmlFor="filter-location" className="block text-sm font-medium text-foreground mb-1">
               Location
             </label>
-            <Select value={locationFilter} onValueChange={setLocationFilter}>
+            <Select 
+              value={locationFilter || ALL_LOCATIONS_VALUE} 
+              onValueChange={(value) => setLocationFilter(value === ALL_LOCATIONS_VALUE ? '' : value)}
+            >
               <SelectTrigger id="filter-location" className="w-full">
                 <SelectValue placeholder="All Locations" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Locations</SelectItem>
+                <SelectItem value={ALL_LOCATIONS_VALUE}>All Locations</SelectItem>
                 {uniqueLocations.map(location => (
                   <SelectItem key={location} value={location}>{location}</SelectItem>
                 ))}
