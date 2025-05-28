@@ -121,7 +121,7 @@ export default function JobListings({ initialJobs }: JobListingsProps) {
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL_TYPES_VALUE}>All Types</SelectItem>
+                <SelectItem key={ALL_TYPES_VALUE} value={ALL_TYPES_VALUE}>All Types</SelectItem>
                 {uniqueEmploymentTypes.map(type => (
                   <SelectItem key={type} value={type}>{type}</SelectItem>
                 ))}
@@ -140,7 +140,7 @@ export default function JobListings({ initialJobs }: JobListingsProps) {
                 <SelectValue placeholder="All Locations" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL_LOCATIONS_VALUE}>All Locations</SelectItem>
+                <SelectItem key={ALL_LOCATIONS_VALUE} value={ALL_LOCATIONS_VALUE}>All Locations</SelectItem>
                 {uniqueLocations.map(location => (
                   <SelectItem key={location} value={location}>{location}</SelectItem>
                 ))}
