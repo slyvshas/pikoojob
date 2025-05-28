@@ -1,3 +1,4 @@
+
 // src/components/jobs/JobListings.tsx
 "use client";
 
@@ -123,7 +124,7 @@ export default function JobListings({ initialJobs }: JobListingsProps) {
               <SelectContent>
                 <SelectItem key={ALL_TYPES_VALUE} value={ALL_TYPES_VALUE}>All Types</SelectItem>
                 {uniqueEmploymentTypes.map(type => (
-                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                  <SelectItem key={`dyn-type-${type}`} value={type}>{type}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -142,7 +143,7 @@ export default function JobListings({ initialJobs }: JobListingsProps) {
               <SelectContent>
                 <SelectItem key={ALL_LOCATIONS_VALUE} value={ALL_LOCATIONS_VALUE}>All Locations</SelectItem>
                 {uniqueLocations.map(location => (
-                  <SelectItem key={location} value={location}>{location}</SelectItem>
+                  <SelectItem key={`dyn-loc-${location}`} value={location}>{location}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -186,3 +187,4 @@ export default function JobListings({ initialJobs }: JobListingsProps) {
     </div>
   );
 }
+
