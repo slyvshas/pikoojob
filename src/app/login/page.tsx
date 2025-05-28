@@ -77,19 +77,39 @@ export default function LoginPage() {
     setIsLoading(true);
     setAuthError(null);
     setMessage(null);
+
+    // Generate a username from email to pass to the trigger via options.data
+    // This helps satisfy potential DB constraints on profiles.username (e.g., NOT NULL, length)
+    let generatedUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
+    if (!generatedUsername) { // Handle cases like ".@example.com" or "@@example.com"
+      generatedUsername = 'user';
+    }
+
+    // Ensure username is at least 3 characters long, append random chars if not
+    if (generatedUsername.length < 3) {
+      const neededChars = 3 - generatedUsername.length;
+      // Append a few random alphanumeric characters (e.g., 'a' + 'bc1' if neededChars is 1 and base is 'a')
+      generatedUsername += Math.random().toString(36).substring(2, 2 + neededChars + 2); // +2 for more variety
+    }
+    // Limit overall length for sanity (e.g., max 24 characters)
+    generatedUsername = generatedUsername.substring(0, 24);
+
+    const signUpOptions = {
+      emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectedFrom)}`,
+      data: { user_name: generatedUsername } // This will be available in trigger's NEW.raw_user_meta_data
+    };
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectedFrom)}`,
-      },
+      options: signUpOptions,
     });
+
     if (error) {
       setAuthError(error.message);
     } else if (data.user && data.user.identities?.length === 0) {
        // This case often means the user already exists but hasn't confirmed their email,
        // or is trying to sign up with an email that's already registered.
-       // Supabase might return a user object with an empty identities array.
        setAuthError("User may already exist or email needs confirmation. Try signing in or check your email.");
     } else if (data.session === null && data.user) {
       setMessage('Check your email for the confirmation link!');
