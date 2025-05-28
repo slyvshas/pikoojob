@@ -67,8 +67,13 @@ export default function LoginPage() {
     if (error) {
       setAuthError(error.message);
     } else {
-      router.push(redirectedFrom); 
-      router.refresh(); // Important for server components to update
+      // Successfully signed in with Supabase.
+      // Redirect to home. The onAuthStateChange listener in Header
+      // will also call router.refresh(), ensuring session state is updated globally.
+      // From home, user can navigate to protected routes.
+      // If they were deep-linked, middleware will re-evaluate on the next navigation attempt.
+      router.replace('/'); 
+      router.refresh(); // Still good to call refresh here to ensure client state is up-to-date.
     }
     setIsLoading(false);
   };
@@ -114,8 +119,9 @@ export default function LoginPage() {
     } else if (data.session === null && data.user) {
       setMessage('Check your email for the confirmation link!');
     } else if (data.session) {
-       router.push(redirectedFrom);
-       router.refresh(); // Important for server components to update
+       // User signed up and is immediately logged in. Redirect to home.
+       router.replace('/');
+       router.refresh(); 
     }
     setIsLoading(false);
   };
