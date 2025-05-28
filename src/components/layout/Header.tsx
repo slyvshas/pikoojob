@@ -28,7 +28,7 @@ export function Header() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null); // State for profile data
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
 
   useEffect(() => {
@@ -41,29 +41,29 @@ export function Header() {
 
       if (error) {
         if (error.code === 'PGRST116') { // "No rows found"
-          // This is expected if a user exists in auth but not in profiles yet.
-          console.log(`No profile found for user ${userId}. This is normal if the profile hasn't been created yet.`);
+          console.log(`[Header] No profile found for user ${userId}. This is normal if the profile hasn't been created yet. User will be treated as non-admin.`);
         } else if (error.code === '42P01') { // "Relation undefined" / "Table does not exist"
-          console.warn(`The 'profiles' table does not seem to exist in your Supabase database. Please run the SQL script to create it. User: ${userId}`);
+          console.warn(`[Header] The 'profiles' table does not seem to exist in your Supabase database. Please run the SQL script to create it. User: ${userId}`);
         } else {
-          // Log other, unexpected errors
-          console.error('Error fetching profile:', error.message);
+          console.error('[Header] Error fetching profile:', error.message);
         }
-        setProfile(null); // Ensure profile is null on any error
+        setProfile(null); // Ensure profile is null on any error or if not found
       } else {
-        setProfile(data as Profile | null); // Cast to Profile
+        setProfile(data as Profile | null);
       }
     };
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
-      setProfile(null); // Reset profile on auth change
+      setIsLoadingUser(true); // Indicate loading while profile is being fetched/updated
 
       if (currentUser) {
         await fetchProfile(currentUser.id);
+      } else {
+        setProfile(null); // User is logged out, so clear profile
       }
-      setIsLoadingUser(false);
+      setIsLoadingUser(false); // Done loading profile information
       
       if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
         if (pathname === '/login') {
@@ -72,7 +72,8 @@ export function Header() {
         router.refresh();
       }
       if (event === 'SIGNED_OUT') {
-        if (pathname.startsWith('/saved-jobs') || pathname.startsWith('/admin')) { // Also redirect from admin if logged out
+        // setProfile(null); // Already handled above if currentUser is null
+        if (pathname.startsWith('/saved-jobs') || pathname.startsWith('/admin')) {
             router.push('/');
         } else {
             router.refresh();
@@ -82,11 +83,14 @@ export function Header() {
 
     // Check initial session
     const getInitialSession = async () => {
+        setIsLoadingUser(true);
         const { data: { session } } = await supabase.auth.getSession();
         const currentUser = session?.user ?? null;
         setUser(currentUser);
         if (currentUser) {
           await fetchProfile(currentUser.id);
+        } else {
+          setProfile(null);
         }
         setIsLoadingUser(false);
     };
@@ -99,7 +103,7 @@ export function Header() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    setProfile(null); // Clear profile on logout
+    // setProfile(null); // Auth listener will handle clearing profile
     // The onAuthStateChange listener will handle router.refresh() or redirects
   };
 
