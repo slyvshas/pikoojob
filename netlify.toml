@@ -10,47 +10,9 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Handle Next.js static files
-[[redirects]]
-  from = "/_next/static/*"
-  to = "/_next/static/:splat"
-  status = 200
-  force = true
-  conditions = {Path = ["/_next/static/*"]}
-
-[[redirects]]
-  from = "/_next/data/*"
-  to = "/_next/data/:splat"
-  status = 200
-  force = true
-  conditions = {Path = ["/_next/data/*"]}
-
-[[redirects]]
-  from = "/_next/image/*"
-  to = "/_next/image/:splat"
-  status = 200
-  force = true
-  conditions = {Path = ["/_next/image/*"]}
-
-[[redirects]]
-  from = "/static/*"
-  to = "/static/:splat"
-  status = 200
-  force = true
-  conditions = {Path = ["/static/*"]}
-
-# Handle all other routes
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  force = true
-  conditions = {Path = ["/*"]}
-
 # Handle 404s
 [[redirects]]
   from = "/*"
   to = "/404.html"
   status = 404
-  force = true
-  conditions = {Path = ["/*"]} 
+  force = true 
