@@ -1,28 +1,40 @@
 [build]
   command = "npm run build"
   publish = ".next"
-  node_version = "18.17.0"
 
 [build.environment]
+  NEXT_USE_NETLIFY_EDGE = "true"
   NEXT_TELEMETRY_DISABLED = "1"
   NODE_VERSION = "18.17.0"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Handle client-side routing
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
-# Handle Next.js specific redirects
 [[redirects]]
   from = "/_next/static/*"
   to = "/_next/static/:splat"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/_next/data/*"
   to = "/_next/data/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/_next/image/*"
+  to = "/_next/image/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/static/*"
+  to = "/static/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
   status = 200 
