@@ -1,10 +1,9 @@
-
 import { getAllJobs } from '@/lib/jobs';
 import JobListings from '@/components/jobs/JobListings';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Find Jobs | Career Compass',
+  title: 'Find Jobs | PikooJobs',
   description: 'Search and filter through available job opportunities.',
 };
 

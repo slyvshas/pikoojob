@@ -1,103 +1,233 @@
-import type { JobPosting, JobPostingFormData } from '@/types';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-import type { DbJobPosting } from '@/types_db';
+import { createClient } from './supabase/client';
+import { createSupabaseServerClient } from './supabase/server-actions';
 
-// Helper to map Supabase's snake_case to our camelCase JobPosting type
-// Supabase client v2+ does this automatically for SELECT queries.
-function dbToAppJobPosting(dbJob: DbJobPosting): JobPosting {
-  return {
-    id: dbJob.id,
-    title: dbJob.title,
-    companyName: dbJob.company_name,
-    companyLogoUrl: dbJob.company_logo_url,
-    companyLogoAiHint: dbJob.company_logo_ai_hint,
-    companyDescription: dbJob.company_description,
-    location: dbJob.location,
-    description: dbJob.description,
-    fullDescription: dbJob.full_description,
-    requirements: dbJob.requirements || [],
-    employmentType: dbJob.employment_type,
-    salary: dbJob.salary,
-    postedDate: dbJob.posted_date, // Assuming it's already a string in ISO format
-    externalApplyLink: dbJob.external_apply_link,
-    tags: dbJob.tags || [],
-    createdBy: dbJob.created_by,
-    createdAt: dbJob.created_at,
-    updatedAt: dbJob.updated_at,
-  };
+export interface Job {
+  id: string;
+  title: string;
+  company_name: string;
+  location: string;
+  employment_type: string;
+  experience_level: string;
+  salary_range: string;
+  description: string;
+  requirements: string[];
+  benefits: string[];
+  external_apply_link: string;
+  company_logo: string;
+  created_at: string;
+  tags: string[];
 }
 
-
-export async function getAllJobs(): Promise<JobPosting[]> {
-  const supabase = createSupabaseServerClient();
-  const { data, error } = await supabase
+export async function getAllJobs() {
+  const supabase = await createSupabaseServerClient();
+  const { data: jobs, error } = await supabase
     .from('job_postings')
     .select('*')
-    .order('posted_date', { ascending: false });
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching jobs:', error);
-    return [];
+    throw error;
   }
-  // Supabase client automatically maps snake_case to camelCase
-  return data.map(job => job as unknown as JobPosting);
+
+  return jobs as Job[];
 }
 
-export async function getJobById(id: string): Promise<JobPosting | undefined> {
-  const supabase = createSupabaseServerClient();
-  const { data, error } = await supabase
+export async function getJobById(id: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data: job, error } = await supabase
     .from('job_postings')
     .select('*')
     .eq('id', id)
     .single();
 
   if (error) {
-    if (error.code === 'PGRST116') { // PostgREST error for "No rows found"
-        console.log(`Job with id ${id} not found.`);
-    } else {
-        console.error(`Error fetching job by id ${id}:`, error);
-    }
-    return undefined;
+    console.error('Error fetching job:', error);
+    throw error;
   }
-  // Supabase client automatically maps snake_case to camelCase
-  return data as unknown as JobPosting;
+
+  return job as Job;
 }
 
-export async function addJob(jobData: JobPostingFormData, userId: string): Promise<JobPosting> {
-  const supabase = createSupabaseServerClient();
+export async function getSavedJobs(userId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data: savedJobs, error } = await supabase
+    .from('saved_jobs')
+    .select('job_id, user_id')
+    .eq('user_id', userId);
 
-  const jobToInsert = {
-    title: jobData.title,
-    company_name: jobData.companyName,
-    company_logo_url: jobData.companyLogoUrl || `https://placehold.co/64x64.png?text=${jobData.companyName.substring(0,2)}`,
-    company_logo_ai_hint: jobData.companyLogoAiHint || 'company logo',
-    company_description: jobData.companyDescription,
-    location: jobData.location,
-    description: jobData.description,
-    full_description: jobData.fullDescription,
-    requirements: jobData.requirements.split(',').map(req => req.trim()).filter(req => req.length > 0),
-    employment_type: jobData.employmentType,
-    salary: jobData.salary,
-    // posted_date is defaulted to now() by the database
-    external_apply_link: jobData.externalApplyLink,
-    tags: jobData.tags?.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0) || [],
-    created_by: userId,
-  };
+  if (error) {
+    console.error('Error fetching saved jobs:', error);
+    throw error;
+  }
 
+  const jobIds = savedJobs.map(saved => saved.job_id);
+
+  // If there are no saved job IDs, return an empty array immediately
+  if (jobIds.length === 0) {
+    return [];
+  }
+
+  const { data: jobs, error: jobsError } = await supabase
+    .from('job_postings')
+    .select('id, title, company_name, location, employment_type, experience_level, salary_range, description, requirements, benefits, external_apply_link, company_logo, created_at, tags')
+    .in('id', jobIds)
+    .order('created_at', { ascending: false });
+
+  if (jobsError) {
+    console.error('Error fetching saved job details:', jobsError);
+    throw jobsError;
+  }
+
+  // Explicitly map the fetched data to ensure it's a plain object array
+  return jobs.map(job => ({
+    id: job.id,
+    title: job.title,
+    company_name: job.company_name,
+    location: job.location,
+    employment_type: job.employment_type,
+    experience_level: job.experience_level,
+    salary_range: job.salary_range,
+    description: job.description,
+    requirements: Array.isArray(job.requirements) ? job.requirements.map(req => String(req)) : [],
+    benefits: Array.isArray(job.benefits) ? job.benefits.map(ben => String(ben)) : [],
+    external_apply_link: job.external_apply_link,
+    company_logo: job.company_logo,
+    created_at: String(job.created_at),
+    tags: Array.isArray(job.tags) ? job.tags.map(tag => String(tag)) : [],
+  })) as Job[];
+}
+
+export async function saveJob(userId: string, jobId: string) {
+  const supabase = await createSupabaseServerClient();
+  
+  // First check if the job exists
+  const { data: job, error: jobError } = await supabase
+    .from('job_postings')
+    .select('id')
+    .eq('id', jobId)
+    .single();
+
+  if (jobError || !job) {
+    console.error('Error verifying job:', jobError);
+    throw new Error('Job not found');
+  }
+
+  // Check if already saved
+  const { data: existing, error: checkError } = await supabase
+    .from('saved_jobs')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('job_id', jobId)
+    .single();
+
+  if (existing) {
+    return; // Already saved, no need to do anything
+  }
+
+  // Save the job
+  const { error } = await supabase
+    .from('saved_jobs')
+    .insert([
+      {
+        user_id: userId,
+        job_id: jobId
+      }
+    ]);
+
+  if (error) {
+    console.error('Error saving job:', error);
+    throw error;
+  }
+}
+
+export async function unsaveJob(userId: string, jobId: string) {
+  const supabase = await createSupabaseServerClient();
+  
+  // Check if the job is actually saved
+  const { data: existing, error: checkError } = await supabase
+    .from('saved_jobs')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('job_id', jobId)
+    .single();
+
+  if (checkError && checkError.code !== 'PGRST116') {
+    console.error('Error checking saved job:', checkError);
+    throw checkError;
+  }
+
+  if (!existing) {
+    return; // Not saved, no need to do anything
+  }
+
+  // Remove the saved job
+  const { error } = await supabase
+    .from('saved_jobs')
+    .delete()
+    .eq('user_id', userId)
+    .eq('job_id', jobId);
+
+  if (error) {
+    console.error('Error unsaving job:', error);
+    throw error;
+  }
+}
+
+export async function isJobSaved(userId: string, jobId: string) {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from('saved_jobs')
+      .select('id')
+      .eq('job_id', jobId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error checking if job is saved:', error);
+      return false;
+    }
+
+    return !!data;
+  } catch (error) {
+    console.error('Error in isJobSaved:', error);
+    return false;
+  }
+}
+
+export async function addJob(jobData: Omit<Job, 'id' | 'created_at'>) {
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from('job_postings')
-    .insert(jobToInsert)
+    .insert([jobData])
     .select()
     .single();
 
   if (error) {
     console.error('Error adding job:', error);
-    throw new Error(`Failed to add job: ${error.message}`);
+    throw error;
   }
 
-  if (!data) {
-    throw new Error('Failed to add job, no data returned.');
-  }
-  // Supabase client automatically maps snake_case to camelCase on select
-  return data as unknown as JobPosting;
+  return data as Job;
 }
+
+export async function getJobsByIds(ids: string[]): Promise<Job[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: jobs, error } = await supabase
+    .from('job_postings')
+    .select('id, title, company_name, location, employment_type, experience_level, salary_range, description, requirements, benefits, external_apply_link, company_logo, created_at, tags')
+    .in('id', ids)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching jobs by IDs:', error);
+    throw error;
+  }
+
+  return jobs as Job[];
+} 

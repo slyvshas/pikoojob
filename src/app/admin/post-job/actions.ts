@@ -1,65 +1,62 @@
 // src/app/admin/post-job/actions.ts
 "use server";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server-actions";
 import { addJob } from "@/lib/jobs";
 import { JobPostingSchema, type JobPostingFormData } from "@/types";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Profile } from '@/types_db';
 
-
 export async function createJobAction(formData: JobPostingFormData): Promise<{ success: boolean; message: string; jobId?: string; errors?: any }> {
-  const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: "Authentication required." };
-  }
-
-  let profileData: Pick<Profile, 'is_admin'> | null = null;
-  let profileErrorObj: any = null;
-
   try {
-    const { data, error } = await supabase
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, message: "Authentication required." };
+    }
+
+    // Check if user is admin
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
-      .single<Pick<Profile, 'is_admin'>>();
-    profileData = data;
-    profileErrorObj = error;
-  } catch (e) {
-    profileErrorObj = e;
-  }
+      .single();
 
-
-  if (profileErrorObj) {
-    let userMessage = "Error verifying admin status.";
-    if (profileErrorObj.code === 'PGRST116') {
-      console.log(`[Admin Action] No profile found for user ${user.id}. User treated as non-admin.`);
-      userMessage = "Profile not found. Admin verification failed.";
-    } else if (profileErrorObj.code === '42P01') {
-      console.warn(`[Admin Action] The 'profiles' table not found in Supabase. Admin verification for ${user.id} failed.`);
-      userMessage = "System configuration error: Profile system not found.";
-    } else {
-      console.error("[Admin Action] Error fetching profile or profile not found:", profileErrorObj.message);
+    if (profileError) {
+      console.error('Error checking admin status:', profileError);
+      return { success: false, message: "Error verifying admin status." };
     }
-    return { success: false, message: userMessage };
-  }
 
-  if (!profileData || !profileData.is_admin) {
-    console.log(`[Admin Action] Unauthorized attempt to post job by user ${user.id}. Profile admin status: ${profileData?.is_admin}`);
-    return { success: false, message: "Unauthorized. Admin access required." };
-  }
+    if (!profile?.is_admin) {
+      return { success: false, message: "Unauthorized. Admin access required." };
+    }
 
-  const validation = JobPostingSchema.safeParse(formData);
-  if (!validation.success) {
-    return { success: false, message: "Invalid form data.", errors: validation.error.flatten().fieldErrors };
-  }
+    const validation = JobPostingSchema.safeParse(formData);
+    if (!validation.success) {
+      return { success: false, message: "Invalid form data.", errors: validation.error.flatten().fieldErrors };
+    }
 
-  try {
-    // Pass user.id to addJob
-    const newJob = await addJob(validation.data, user.id);
+    // Map the form data to match the database schema
+    const jobData = {
+      title: validation.data.title,
+      company_name: validation.data.companyName,
+      company_logo_url: validation.data.companyLogoUrl || null,
+      company_logo_ai_hint: validation.data.companyLogoAiHint || null,
+      company_description: validation.data.companyDescription || null,
+      location: validation.data.location,
+      description: validation.data.description,
+      full_description: validation.data.fullDescription || null,
+      requirements: validation.data.requirements.split(',').map(req => req.trim()).filter(req => req.length > 0),
+      employment_type: validation.data.employmentType,
+      salary: validation.data.salary || null,
+      external_apply_link: validation.data.externalApplyLink,
+      tags: validation.data.tags ? validation.data.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0) : null,
+      created_by: user.id
+    };
+
+    const newJob = await addJob(jobData);
     revalidatePath('/'); // Revalidate home page to show new job listing
     revalidatePath('/jobs'); // If you have a generic /jobs page
     revalidatePath(`/jobs/${newJob.id}`); // Revalidate the new job's detail page

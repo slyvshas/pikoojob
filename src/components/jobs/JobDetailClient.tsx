@@ -56,10 +56,12 @@ export default function JobDetailClient({ job }: JobDetailClientProps) {
             rel="noopener noreferrer"
             className={cn(
               buttonVariants({ size: "lg" }),
-              "w-full sm:w-auto md:w-full bg-accent hover:bg-accent/90 text-accent-foreground"
+              "w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base px-6 py-3"
             )}
           >
-            Apply Now <ExternalLink size={18} className="ml-2" />
+            <span className="flex items-center justify-center">
+              Apply Now <ExternalLink size={18} className="ml-2" />
+            </span>
           </a>
           {savedJobsLoaded && (
             <Tooltip>

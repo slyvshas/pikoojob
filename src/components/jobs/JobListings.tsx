@@ -1,4 +1,3 @@
-
 // src/components/jobs/JobListings.tsx
 "use client";
 
@@ -49,11 +48,15 @@ export default function JobListings({ initialJobs }: JobListingsProps) {
 
   const filteredJobs = useMemo(() => {
     return initialJobs.filter(job => {
-      const matchesSearchTerm = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                job.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                job.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-      const matchesEmploymentType = employmentTypeFilter ? job.employmentType === employmentTypeFilter : true;
+      const matchesSearchTerm = searchTerm ? (
+        (job.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (job.company_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (job.tags?.some(tag => (tag?.toLowerCase() || '').includes(searchTerm.toLowerCase())) || false)
+      ) : true;
+      
+      const matchesEmploymentType = employmentTypeFilter ? job.employment_type === employmentTypeFilter : true;
       const matchesLocation = locationFilter ? job.location === locationFilter : true;
+      
       return matchesSearchTerm && matchesEmploymentType && matchesLocation;
     });
   }, [initialJobs, searchTerm, employmentTypeFilter, locationFilter]);

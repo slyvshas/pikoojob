@@ -1,7 +1,10 @@
+'use server';
+
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-export function createClient() {
+// This file should only be imported in server actions or server components
+export const createSupabaseServerClient = async () => {
   const cookieStore = cookies();
 
   return createServerClient(
@@ -29,4 +32,4 @@ export function createClient() {
       },
     }
   );
-} 
+}; 
