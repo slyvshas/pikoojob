@@ -29,7 +29,6 @@ const nextConfig = {
     ],
   },
   // Optimize for Netlify deployment
-  output: 'standalone',
   poweredByHeader: false,
   compress: true,
   generateEtags: true,
