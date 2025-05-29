@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Header } from '@/components/layout/Header';
+import Script from 'next/script';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -20,6 +21,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="stylesheet" href="/globals.css" />
+      </head>
       <body className={inter.className}>
         <ThemeProvider
           attribute="class"
@@ -28,15 +32,19 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <TooltipProvider>
-            <div className="flex min-h-screen flex-col">
+            <div className="container py-4">
               <Header />
-              <main className="flex-1">
+              <main className="mt-4">
                 {children}
               </main>
             </div>
             <Toaster />
           </TooltipProvider>
         </ThemeProvider>
+        <Script 
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );

@@ -7,7 +7,6 @@
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "next build",
-    
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
@@ -47,6 +46,7 @@
     "@tiptap/pm": "^2.1.13",
     "@tiptap/react": "^2.1.13",
     "@tiptap/starter-kit": "^2.1.13",
+    "bootstrap": "^5.3.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "date-fns": "^3.3.1",
@@ -69,12 +69,12 @@
     "@types/node": "^20.11.16",
     "@types/react": "^18.2.52",
     "@types/react-dom": "^18.2.18",
-    "autoprefixer": "^10.4.17",
-    "postcss": "^8.4.33",
-    "tailwindcss": "^3.4.1",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.4",
+    "tailwindcss": "^4.1.8",
     "typescript": "^5.3.3"
   },
   "engines": {
-    "node": "22.15.1"
+    "node": "22.13.1"
   }
 }

@@ -43,30 +43,29 @@ export function JobCard({ job }: JobCardProps) {
   };
 
   return (
-    <Link href={`/jobs/${job.id}`} className="block">
-      <article className="group relative overflow-hidden rounded-lg border bg-card p-6 transition-all hover:shadow-lg">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative h-12 w-12 overflow-hidden rounded-lg border bg-muted">
+    <Link href={`/jobs/${job.id}`} className="text-decoration-none">
+      <div className="card h-100 border-0 shadow-sm hover-shadow-lg transition-all">
+        <div className="card-body p-4">
+          {/* Header with Company Logo and Title */}
+          <div className="d-flex align-items-start justify-content-between mb-3">
+            <div className="d-flex align-items-center gap-3 flex-grow-1 me-2">
+              <div className="position-relative flex-shrink-0" style={{ width: '48px', height: '48px' }}>
                 {job.company_logo ? (
                   <Image
                     src={job.company_logo}
                     alt={job.company_name}
                     fill
-                    className="object-cover"
+                    className="rounded-3 object-fit-cover"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-muted text-muted-foreground">
-                    <Building2 className="h-6 w-6" />
+                  <div className="d-flex h-100 w-100 align-items-center justify-content-center bg-light rounded-3">
+                    <Building2 className="text-muted" style={{ width: '24px', height: '24px' }} />
                   </div>
                 )}
               </div>
-              <div>
-                <h3 className="font-semibold leading-none tracking-tight">
-                  {job.title}
-                </h3>
-                <p className="text-sm text-muted-foreground">{job.company_name}</p>
+              <div className="flex-grow-1 overflow-hidden">
+                <h3 className="h5 mb-1 text-dark fw-semibold text-truncate">{job.title}</h3>
+                <p className="text-muted mb-0 small text-truncate">{job.company_name}</p>
               </div>
             </div>
             {job.external_apply_link && (
@@ -76,12 +75,10 @@ export function JobCard({ job }: JobCardProps) {
                     <Button
                       variant="default"
                       onClick={handleApply}
-                      className="w-auto bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-shadow mt-0 px-2 py-1 text-xs sm:mt-2 sm:px-4 sm:py-2 sm:text-base"
+                      className="btn btn-primary btn-sm d-flex align-items-center gap-1 flex-shrink-0"
                     >
-                      <span className="relative flex items-center justify-center">
-                        Apply Now
-                        <ExternalLink className="ml-1 h-3 w-3 sm:ml-2 sm:h-4 sm:w-4" />
-                      </span>
+                      Apply Now
+                      <ExternalLink className="ms-1" style={{ width: '14px', height: '14px' }} />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -92,37 +89,45 @@ export function JobCard({ job }: JobCardProps) {
             )}
           </div>
 
-          <div className="grid gap-2 text-sm">
-            <div className="flex flex-wrap gap-2">
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <MapPin className="h-4 w-4" />
+          {/* Job Details */}
+          <div className="mb-3">
+            <div className="d-flex flex-wrap gap-3 mb-2">
+              <div className="d-flex align-items-center text-muted small">
+                <MapPin className="me-1" style={{ width: '16px', height: '16px' }} />
                 <span>{job.location}</span>
               </div>
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <Briefcase className="h-4 w-4" />
+              <div className="d-flex align-items-center text-muted small">
+                <Briefcase className="me-1" style={{ width: '16px', height: '16px' }} />
                 <span>{job.employmentType}</span>
               </div>
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <Clock className="h-4 w-4" />
+              <div className="d-flex align-items-center text-muted small">
+                <Clock className="me-1" style={{ width: '16px', height: '16px' }} />
                 <span>{formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}</span>
               </div>
             </div>
             {job.salary_range && (
-              <p className="text-muted-foreground">{job.salary_range}</p>
+              <p className="text-muted mb-0 small">{job.salary_range}</p>
             )}
           </div>
 
-          <p className="line-clamp-2 text-sm text-muted-foreground">
+          {/* Description */}
+          <p className="text-muted small mb-3" style={{ 
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden'
+          }}>
             {job.description}
           </p>
 
+          {/* Tags */}
           {job.tags && job.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="d-flex flex-wrap gap-2">
               {job.tags.map((tag) => (
                 <Badge
                   key={tag}
                   variant="secondary"
-                  className="bg-primary/10 text-primary hover:bg-primary/20"
+                  className="bg-primary bg-opacity-10 text-primary border-0"
                 >
                   {tag}
                 </Badge>
@@ -130,7 +135,7 @@ export function JobCard({ job }: JobCardProps) {
             </div>
           )}
         </div>
-      </article>
+      </div>
     </Link>
   );
 }

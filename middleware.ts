@@ -1,7 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import type { Profile } from '@/types_db'; // Import Profile type
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+import type { Profile } from '@/types_db';
 
 export async function middleware(request: NextRequest) {
   // Skip middleware for static files and API routes
