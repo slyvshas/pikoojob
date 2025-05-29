@@ -28,6 +28,13 @@ const nextConfig = {
       },
     ],
   },
+  // Optimize for Netlify deployment
+  output: 'standalone',
+  poweredByHeader: false,
+  compress: true,
+  generateEtags: true,
+  reactStrictMode: true,
+  swcMinify: true,
 }
 
 module.exports = nextConfig
