@@ -10,6 +10,16 @@ export async function middleware(request: NextRequest) {
     },
   });
 
+  // Skip middleware for static files and API routes
+  if (
+    request.nextUrl.pathname.startsWith('/_next') ||
+    request.nextUrl.pathname.startsWith('/api') ||
+    request.nextUrl.pathname.startsWith('/static') ||
+    request.nextUrl.pathname.includes('.')
+  ) {
+    return response;
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -19,83 +29,42 @@ export async function middleware(request: NextRequest) {
           return request.cookies.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({ name, value, ...options });
-          response = NextResponse.next({ request: { headers: request.headers } });
-          response.cookies.set({ name, value, ...options });
+          response.cookies.set({
+            name,
+            value,
+            ...options,
+          });
         },
         remove(name: string, options: CookieOptions) {
-          request.cookies.set({ name, value: '', ...options });
-          response = NextResponse.next({ request: { headers: request.headers } });
-          response.cookies.set({ name, value: '', ...options });
+          response.cookies.set({
+            name,
+            value: '',
+            ...options,
+          });
         },
       },
     }
   );
 
-  const { data: { session: currentSession } } = await supabase.auth.getSession();
-  const { pathname } = request.nextUrl;
+  const { data: { session } } = await supabase.auth.getSession();
+  const currentSession = session;
 
-  // Protect /saved-jobs route
-  if (!currentSession && pathname.startsWith('/saved-jobs')) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    url.searchParams.set('redirectedFrom', pathname);
-    return NextResponse.redirect(url);
+  // Protected routes that require authentication
+  const protectedRoutes = ['/profile', '/admin'];
+  const isProtectedRoute = protectedRoutes.some(route => 
+    request.nextUrl.pathname.startsWith(route)
+  );
+
+  // If user is not logged in and tries to access protected route, redirect to login
+  if (!currentSession && isProtectedRoute) {
+    const redirectUrl = new URL('/login', request.url);
+    redirectUrl.searchParams.set('redirectTo', request.nextUrl.pathname);
+    return NextResponse.redirect(redirectUrl);
   }
 
-  // Protect /admin routes
-  if (pathname.startsWith('/admin')) {
-    if (!currentSession) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/login';
-      url.searchParams.set('redirectedFrom', pathname);
-      return NextResponse.redirect(url);
-    }
-
-    // Check if the user is an admin
-    let profile: Pick<Profile, 'is_admin'> | null = null;
-    let profileErrorObj: any = null;
-
-    try {
-        const { data, error } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', currentSession.user.id)
-        .single<Pick<Profile, 'is_admin'>>();
-        
-        profile = data;
-        profileErrorObj = error;
-    } catch (e) { // Catch unexpected errors during the call itself
-        profileErrorObj = e;
-    }
-    
-
-    if (profileErrorObj) {
-      if (profileErrorObj.code === 'PGRST116') { // No profile row found
-        // This is expected if a user exists in auth but not in profiles yet.
-        console.log(`[Middleware] No profile found for user ${currentSession.user.id} during admin check. User will be treated as non-admin.`);
-      } else if (profileErrorObj.code === '42P01') { // Table doesn't exist
-        console.warn(`[Middleware] The 'profiles' table does not seem to exist in Supabase. Admin check for user ${currentSession.user.id} will fail.`);
-      } else {
-        console.error('[Middleware] Error fetching profile for admin check:', profileErrorObj.message);
-      }
-    }
-
-    if (!profile || !profile.is_admin) {
-      // Not an admin or error fetching profile, redirect to home or an unauthorized page
-      const url = request.nextUrl.clone();
-      url.pathname = '/';
-      url.searchParams.set('error', 'unauthorized_admin_access');
-      console.log(`[Middleware] Admin access denied for user ${currentSession.user.id} to path ${pathname}. Profile: ${JSON.stringify(profile)}`);
-      return NextResponse.redirect(url);
-    }
-  }
-  
   // If user is logged in and tries to access /login, redirect to home
-  if (currentSession && pathname === '/login') {
-    const url = request.nextUrl.clone();
-    url.pathname = '/';
-    return NextResponse.redirect(url);
+  if (currentSession && request.nextUrl.pathname === '/login') {
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
   return response;
@@ -108,9 +77,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - auth/callback (Supabase OAuth callback)
-     * Feel free to modify this pattern to include more paths.
+     * - public folder
      */
-    '/((?!_next/static|_next/image|favicon.ico|auth/callback).*)',
+    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
   ],
 };
