@@ -1,4 +1,5 @@
 // src/app/login/page.tsx
+import { Suspense } from 'react';
 import { LoginForm } from '@/components/auth/LoginForm';
 
 export default function LoginPage() {
@@ -13,7 +14,9 @@ export default function LoginPage() {
             Enter your email to sign in to your account
           </p>
         </div>
-        <LoginForm />
+        <Suspense fallback={<div>Loading...</div>}>
+          <LoginForm />
+        </Suspense>
       </div>
     </div>
   );

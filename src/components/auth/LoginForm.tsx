@@ -57,14 +57,19 @@ export function LoginForm() {
 
   const handleSignInWithProvider = async (provider: Provider) => {
     setLoading(true);
-    const { error } = await createClient().auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
-      },
-    });
-    if (error) {
-      toast.error(error.message);
+    try {
+      const { error } = await createClient().auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+        },
+      });
+      if (error) {
+        throw error;
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to sign in with provider');
+      setLoading(false);
     }
   };
 
@@ -85,6 +90,7 @@ export function LoginForm() {
                 disabled={loading}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
               />
             </div>
             <div className="grid gap-2">
@@ -95,9 +101,10 @@ export function LoginForm() {
                 disabled={loading}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                required
               />
             </div>
-            <Button disabled={loading}>
+            <Button disabled={loading} type="submit">
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </div>
@@ -120,6 +127,7 @@ export function LoginForm() {
         className="w-full"
         onClick={() => handleSignInWithProvider('github')}
         disabled={loading}
+        type="button"
       >
         <Github className="mr-2 h-4 w-4" />
         GitHub

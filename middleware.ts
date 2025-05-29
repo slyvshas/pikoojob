@@ -4,12 +4,6 @@ import type { Profile } from '@/types_db'; // Import Profile type
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
-
   // Skip middleware for static files and API routes
   if (
     request.nextUrl.pathname.startsWith('/_next') ||
@@ -17,8 +11,14 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/static') ||
     request.nextUrl.pathname.includes('.')
   ) {
-    return response;
+    return NextResponse.next();
   }
+
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -46,28 +46,34 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { session } } = await supabase.auth.getSession();
-  const currentSession = session;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const currentSession = session;
 
-  // Protected routes that require authentication
-  const protectedRoutes = ['/profile', '/admin'];
-  const isProtectedRoute = protectedRoutes.some(route => 
-    request.nextUrl.pathname.startsWith(route)
-  );
+    // Protected routes that require authentication
+    const protectedRoutes = ['/profile', '/admin'];
+    const isProtectedRoute = protectedRoutes.some(route => 
+      request.nextUrl.pathname.startsWith(route)
+    );
 
-  // If user is not logged in and tries to access protected route, redirect to login
-  if (!currentSession && isProtectedRoute) {
-    const redirectUrl = new URL('/login', request.url);
-    redirectUrl.searchParams.set('redirectTo', request.nextUrl.pathname);
-    return NextResponse.redirect(redirectUrl);
+    // If user is not logged in and tries to access protected route, redirect to login
+    if (!currentSession && isProtectedRoute) {
+      const redirectUrl = new URL('/login', request.url);
+      redirectUrl.searchParams.set('redirectTo', request.nextUrl.pathname);
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    // If user is logged in and tries to access /login, redirect to home
+    if (currentSession && request.nextUrl.pathname === '/login') {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+
+    return response;
+  } catch (error) {
+    // If there's an error, just continue with the request
+    console.error('Middleware error:', error);
+    return response;
   }
-
-  // If user is logged in and tries to access /login, redirect to home
-  if (currentSession && request.nextUrl.pathname === '/login') {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
-
-  return response;
 }
 
 export const config = {
