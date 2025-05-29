@@ -34,7 +34,6 @@ const nextConfig = {
   compress: true,
   generateEtags: true,
   reactStrictMode: true,
-  swcMinify: true,
 }
 
 module.exports = nextConfig
